@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Broadcast Example</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+    <script>
+     	$(document).ready(function(){
+        var socket = io.connect();
+        var name = prompt("Please enter your name", "Your Name");
+        var msgCount = 0;
+
+        function checkTime(i) {
+          if(i < 10) {
+            i = "0" + i;
+          }
+          return i;
+        }
+        function timestamp() {
+          var time = new Date();
+          return `${time.getHours()}:${checkTime(time.getMinutes())}:${checkTime(time.getSeconds())}`
+        }
+
+        var sendMessage = function(sock) {
+          if ($('#msg').val() !== ''){
+            var data = {
+              timestamp: timestamp(),
+              sender: name,
+              contents:$('#msg').val()
+            }
+            sock.emit("send_message", data);
+            $('#msg').val('');
+            //$('#log').append(`<p id='msg${msgCount}'></p>`)
+            //$(`#msg${msgCount++}`).text(`${name} (${data.timestamp}): ${data.contents}`)
+          }
+        }
+        socket.emit("new_user", {name:name});
+
+        socket.on("message", function(data) {
+          $('#log').append(`<p id='msg${msgCount}'></p>`)
+          console.log("message", data);
+          $(`#msg${msgCount++}`).text(`(${data.timestamp}) ${data.sender}: ${data.contents}`)
+          $('#log').scrollTop($('#log')[0].scrollHeight);
+     		});
+
+        socket.on("new_connect", function(data) {
+          $('#log').append(`<p id='msg${msgCount}'></p>`)
+          $(`#msg${msgCount++}`).text(`(${data.timestamp}) ${data.contents}`)
+          $('#log').scrollTop($('#log')[0].scrollHeight);
+          var userlist = "";
+          for(var i = 0; i < data.users.length; i++) {
+            userlist += `<p id='user${i}'></p>`
+          }
+          $('#userlist').html(userlist);
+          for(var j = 0; j < data.users.length; j++) {
+            $(`#user${j}`).text(data.users[j][1]);
+          }
+        });
+
+        socket.on("lost_user", function(data) {
+          $('#log').append(`<p id='msg${msgCount}'></p>`)
+          console.log("disconnect", data);
+          $(`#msg${msgCount++}`).text(`(${data.timestamp}) ${data.contents}`)
+          $('#log').scrollTop($('#log')[0].scrollHeight);
+          var userlist = "";
+          console.log(data.users);
+          var userlist = "";
+          for(var i = 0; i < data.users.length; i++) {
+            userlist += `<p id='user${i}'></p>`
+          }
+          $('#userlist').html(userlist);
+          for(var j = 0; j < data.users.length; j++) {
+            $(`#user${j}`).text(data.users[j][1]);
+          }
+        });
+
+        $('#send').click(function() {
+            sendMessage(socket);
+        });
+        $('#msg').keydown(function(e) {
+          // Press ENTER to send message
+          if(e.keyCode == 13) { sendMessage(socket); }
+        });
+     	});
+     </script>
+     <style type='text/css'>
+     #wrapper {
+       display: block;
+       width: 640px;
+       height: 440px;
+     }
+      #log {
+        display: inline-block;
+        border: 1px black solid;
+        overflow-y: scroll;
+        width: 80%;
+        height: 440px;
+      }
+      #userlist {
+        display: inline-block;
+        border: 1px black solid;
+        overflow-y: scroll;
+        width: 18%;
+        height: 440px;
+      }
+      #input {
+        width: 640px;
+        height: 40px;
+      }
+      #msg {
+        width: 90%;
+      }
+      p {
+        margin: 0px;
+        padding: 0px;
+      }
+     </style>
+  </head>
+  <body>
+    <div id='wrapper'>
+      <div id='log'>
+      </div>
+      <div id='userlist'>
+      </div>
+    </div>
+    <div id='input'>
+      <input type='text' id='msg'><button id='send'>Send</button></form>
+    </div>
+  </body>
+</html>
